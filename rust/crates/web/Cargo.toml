@@ -3,6 +3,7 @@ name = "web"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+publish.workspace = true
 
 # The composition root is the one crate allowed to know every adapter.
 [dependencies]

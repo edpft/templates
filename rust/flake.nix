@@ -134,6 +134,8 @@
           // {
             cargoExtraArgs = "-p web";
             src = workspaceSrc;
+            # Lets `nix run` find the binary without a hand-written app.
+            meta.mainProgram = "web";
           }
         );
 
@@ -159,12 +161,35 @@
             }
           );
 
-          test = craneLib.cargoTest (
+          test = craneLib.cargoNextest (
             commonArgs
             // {
               inherit cargoArtifacts;
             }
           );
+
+          # nextest does not run doctests, so they need their own check.
+          doctest = craneLib.cargoDocTest (
+            commonArgs
+            // {
+              inherit cargoArtifacts;
+            }
+          );
+
+          nix-format =
+            pkgs.runCommand "nix-format"
+              {
+                nativeBuildInputs = [ pkgs.nixfmt ];
+              }
+              ''
+                find ${
+                  lib.fileset.toSource {
+                    root = ./.;
+                    fileset = lib.fileset.fileFilter (file: file.hasExt "nix") ./.;
+                  }
+                } -name '*.nix' -exec nixfmt --check {} +
+                touch "$out"
+              '';
 
           audit-deps = craneLib.cargoAudit {
             inherit src advisory-db;
@@ -176,18 +201,20 @@
         };
 
         packages.default = web;
-        apps.default = flake-utils.lib.mkApp {
-          drv = web;
-          exePath = "/bin/web";
-        };
 
         formatter = pkgs.nixfmt;
 
         devShells.default = craneLib.devShell {
           checks = self.checks.${system};
           packages = with pkgs; [
-            cargo-watch
+            # The tools CI uses, so a failure can be reproduced locally.
+            cargo-audit
+            cargo-deny
+            cargo-nextest
             nixfmt
+            # Conveniences.
+            cargo-watch
+            taplo
           ];
         };
       }
