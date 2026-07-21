@@ -21,7 +21,7 @@
       formatter.${system} = nixpkgs-fmt;
 
       devShell.${system} = mkShell {
-        buildInputs = [ nodejs_18 ];
+        buildInputs = [ nodejs_24 ];
       };
     };
 }
