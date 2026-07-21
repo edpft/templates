@@ -1,0 +1,15 @@
+name: Update flake lock
+
+# Dependabot handles Cargo.toml and the actions, but not flake.lock.
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update:
+    uses: edpft/rust-workflows/.github/workflows/nix-flake-update.yml@main
+    # Without a personal access token here, the pull request this opens will
+    # not trigger CI:
+    #   secrets:
+    #     token: ${{ secrets.FLAKE_UPDATE_TOKEN }}
