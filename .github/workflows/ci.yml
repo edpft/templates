@@ -1,0 +1,78 @@
+name: CI
+
+# Each template is a flake in its own right, and its workflows only run once a
+# project has been initialised from it. Without this, nothing here would catch
+# a template that stopped evaluating — which is exactly how the node template
+# came to reference a nodejs that nixpkgs had removed.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  # Templates break through no fault of their own when an input moves under
+  # them, so check on a schedule too, not only when something changes here.
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  template:
+    name: Check the ${{ matrix.template }} template
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+          - rust
+          - node
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Install nix
+        uses: nixbuild/nix-quick-install-action@v34
+        with:
+          nix_conf: |
+            keep-env-derivations = true
+            keep-outputs = true
+            access-tokens = github.com=${{ github.token }}
+
+      - name: Setup cache
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ matrix.template }}-${{ hashFiles(format('{0}/**', matrix.template)) }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-${{ matrix.template }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-${{ matrix.template }}-
+          purge-created: 0
+          purge-last-accessed: P1DT12H
+          purge-primary-key: never
+
+      # Runs whatever that template's own flake declares, which for the rust
+      # template is the full set of per-crate builds, lints and tests.
+      - name: Check the template
+        run: nix flake check -L "./${TEMPLATE}"
+        env:
+          TEMPLATE: ${{ matrix.template }}
+
+  flake:
+    name: Check the root flake
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Install nix
+        uses: nixbuild/nix-quick-install-action@v34
+        with:
+          nix_conf: |
+            access-tokens = github.com=${{ github.token }}
+
+      # Verifies that every template this flake advertises actually resolves.
+      - name: Check the root flake
+        run: nix flake check -L .
