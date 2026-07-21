@@ -191,6 +191,23 @@
                 touch "$out"
               '';
 
+          # nixpkgs' actionlint brings shellcheck with it, so `run:` scripts
+          # are linted too, not just the workflow schema.
+          workflows =
+            pkgs.runCommand "workflows"
+              {
+                nativeBuildInputs = [ pkgs.actionlint ];
+              }
+              ''
+                actionlint ${
+                  lib.fileset.toSource {
+                    root = ./.;
+                    fileset = ./.github/workflows;
+                  }
+                }/.github/workflows/*.yml
+                touch "$out"
+              '';
+
           audit-deps = craneLib.cargoAudit {
             inherit src advisory-db;
           };
@@ -213,6 +230,7 @@
             cargo-nextest
             nixfmt
             # Conveniences.
+            actionlint
             cargo-watch
             taplo
           ];
