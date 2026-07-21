@@ -1,0 +1,12 @@
+[package]
+name = "infrastructure"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+application.workspace = true
+domain.workspace = true
+
+[lints]
+workspace = true

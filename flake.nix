@@ -5,7 +5,7 @@
     templates = {
       rust = {
         path = ./rust;
-        description = "A very basic rust flake";
+        description = "A rust workspace flake, built with crane and fenix";
       };
       node = {
         path = ./node;
